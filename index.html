@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Игра Мемори (Найди пару)</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .game-container {
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+            max-width: 800px;
+            width: 100%;
+            backdrop-filter: blur(5px);
+        }
+
+        h1 {
+            text-align: center;
+            color: #4a4a4a;
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            background: white;
+            padding: 15px 25px;
+            border-radius: 50px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            font-weight: bold;
+            color: #555;
+        }
+
+        .stats span {
+            color: #667eea;
+            font-size: 1.4em;
+            margin-left: 10px;
+        }
+
+        .moves {
+            background: #f0f0f0;
+            padding: 8px 20px;
+            border-radius: 25px;
+        }
+
+        .timer {
+            background: #f0f0f0;
+            padding: 8px 20px;
+            border-radius: 25px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            aspect-ratio: 1 / 1;
+            background-color: #667eea;
+            border-radius: 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3em;
+            font-weight: bold;
+            color: white;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            transform-style: preserve-3d;
+            position: relative;
+        }
+
+        .card:hover:not(.matched):not(.flipped) {
+            transform: scale(1.05);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.3);
+            background-color: #5a67d8;
+        }
+
+        .card.flipped {
+            background-color: white;
+            color: #4a4a4a;
+            transform: rotateY(180deg);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+            border: 3px solid #667eea;
+        }
+
+        .card.matched {
+            background-color: #9ae6b4;
+            color: #22543d;
+            cursor: default;
+            opacity: 0.8;
+            transform: scale(0.98);
+            border: 3px solid #48bb78;
+            pointer-events: none;
+            animation: pulse 1s;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(0.98); }
+        }
+
+        .card.matched::after {
+            content: "✓";
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #48bb78;
+            color: white;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        button {
+            background: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 50px;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #667eea;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border: 2px solid transparent;
+        }
+
+        button:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.5);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .win-message {
+            text-align: center;
+            font-size: 1.8em;
+            color: #48bb78;
+            font-weight: bold;
+            margin-top: 20px;
+            min-height: 60px;
+            animation: slideIn 0.5s;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 600px) {
+            .grid {
+                gap: 10px;
+            }
+            
+            .card {
+                font-size: 2em;
+            }
+            
+            .stats {
+                flex-direction: column;
+                gap: 10px;
+                border-radius: 20px;
+            }
+            
+            button {
+                padding: 12px 30px;
+                font-size: 1em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🎴 Мемори</h1>
+        
+        <div class="stats">
+            <div class="moves">Ходов: <span id="moves">0</span></div>
+            <div class="timer">Время: <span id="timer">00:00</span></div>
+        </div>
+
+        <div class="grid" id="grid"></div>
+
+        <div class="controls">
+            <button onclick="resetGame()">🔄 Новая игра</button>
+        </div>
+
+        <div id="winMessage" class="win-message"></div>
+    </div>
+
+    <script>
+        const emojis = ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼'];
+        let cards = [];
+        let flippedCards = [];
+        let matchedPairs = 0;
+        let moves = 0;
+        let timer = null;
+        let seconds = 0;
+        let gameStarted = false;
+        let canFlip = true;
+
+        const gridElement = document.getElementById('grid');
+        const movesElement = document.getElementById('moves');
+        const timerElement = document.getElementById('timer');
+        const winMessageElement = document.getElementById('winMessage');
+
+        // Функция для тщательного перемешивания массива (алгоритм Фишера-Йетса)
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // Функция для создания нового расположения карт
+        function createNewDeck() {
+            // Создаем пары для каждого эмодзи
+            const cardPairs = [...emojis, ...emojis];
+            
+            // ТЩАТЕЛЬНО перемешиваем (меняем местами элементы)
+            const shuffledCards = shuffleArray([...cardPairs]); // Создаем копию и перемешиваем
+            
+            // Создаем массив объектов карт с новым порядком
+            return shuffledCards.map((emoji, index) => ({
+                id: index,
+                emoji: emoji,
+                isFlipped: false,
+                isMatched: false,
+                element: null
+            }));
+        }
+
+        function formatTime(totalSeconds) {
+            const mins = Math.floor(totalSeconds / 60);
+            const secs = totalSeconds % 60;
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function startTimer() {
+            if (timer) clearInterval(timer);
+            
+            timer = setInterval(() => {
+                seconds++;
+                timerElement.textContent = formatTime(seconds);
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timer) {
+                clearInterval(timer);
+                timer = null;
+            }
+        }
+
+        function resetTimer() {
+            stopTimer();
+            seconds = 0;
+            timerElement.textContent = formatTime(0);
+        }
+
+        function checkWin() {
+            if (matchedPairs === emojis.length) {
+                stopTimer();
+                winMessageElement.textContent = `🎉 Поздравляем! Вы выиграли за ${moves} ходов и ${formatTime(seconds)}! 🎉`;
+                return true;
+            }
+            return false;
+        }
+
+        function handleCardClick(index) {
+            // Проверяем можно ли перевернуть карту
+            if (!canFlip) return;
+            
+            const card = cards[index];
+            
+            // Не даем перевернуть уже совпавшую, уже перевернутую карту или если уже перевернуто две карты
+            if (card.isMatched || card.isFlipped || flippedCards.length >= 2) return;
+            
+            // Запускаем таймер при первом ходе
+            if (!gameStarted && moves === 0) {
+                gameStarted = true;
+                startTimer();
+            }
+            
+            // Переворачиваем карту
+            card.isFlipped = true;
+            updateCardDisplay(card);
+            
+            // Добавляем в массив перевернутых
+            flippedCards.push(card);
+            
+            // Если перевернуто две карты
+            if (flippedCards.length === 2) {
+                moves++;
+                movesElement.textContent = moves;
+                
+                const [card1, card2] = flippedCards;
+                
+                // Проверяем совпадение
+                if (card1.emoji === card2.emoji) {
+                    // Совпадение
+                    card1.isMatched = true;
+                    card2.isMatched = true;
+                    matchedPairs++;
+                    
+                    // Обновляем отображение
+                    updateCardDisplay(card1);
+                    updateCardDisplay(card2);
+                    
+                    // Очищаем перевернутые карты
+                    flippedCards = [];
+                    
+                    // Проверяем победу
+                    checkWin();
+                } else {
+                    // Не совпадение - переворачиваем обратно через задержку
+                    canFlip = false;
+                    
+                    setTimeout(() => {
+                        card1.isFlipped = false;
+                        card2.isFlipped = false;
+                        
+                        updateCardDisplay(card1);
+                        updateCardDisplay(card2);
+                        
+                        flippedCards = [];
+                        canFlip = true;
+                    }, 1000);
+                }
+            }
+        }
+
+        function updateCardDisplay(card) {
+            if (card.element) {
+                if (card.isMatched) {
+                    card.element.textContent = card.emoji;
+                    card.element.className = 'card matched';
+                } else if (card.isFlipped) {
+                    card.element.textContent = card.emoji;
+                    card.element.className = 'card flipped';
+                } else {
+                    card.element.textContent = '?';
+                    card.element.className = 'card';
+                }
+            }
+        }
+
+        function renderGrid() {
+            gridElement.innerHTML = '';
+            
+            cards.forEach((card, index) => {
+                const cardElement = document.createElement('div');
+                cardElement.className = 'card';
+                cardElement.textContent = card.isFlipped || card.isMatched ? card.emoji : '?';
+                cardElement.addEventListener('click', () => handleCardClick(index));
+                
+                // Сохраняем ссылку на DOM элемент в объекте карты
+                card.element = cardElement;
+                
+                gridElement.appendChild(cardElement);
+            });
+        }
+
+        function resetGame() {
+            // Сбрасываем все состояния
+            stopTimer();
+            resetTimer();
+            
+            flippedCards = [];
+            matchedPairs = 0;
+            moves = 0;
+            gameStarted = false;
+            canFlip = true;
+            
+            movesElement.textContent = '0';
+            winMessageElement.textContent = '';
+            
+            // СОЗДАЕМ НОВУЮ КОЛОДУ С ПЕРЕМЕШАННЫМИ КАРТАМИ (меняем местами)
+            cards = createNewDeck();
+            
+            // Отрисовываем заново
+            renderGrid();
+        }
+
+        // Инициализация игры при загрузке страницы
+        cards = createNewDeck();
+        renderGrid();
+
+        // Добавляем возможность начать новую игру клавишей пробел
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && !e.repeat) {
+                e.preventDefault();
+                resetGame();
+            }
+        });
+    </script>
+</body>
+</html>
